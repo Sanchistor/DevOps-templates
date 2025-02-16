@@ -1,0 +1,35 @@
+version: 0.2
+
+env:
+  variables:
+    REGION: "eu-west-1"
+    REPOSITORY_NAME: "my-app-ecr"
+    ACCOUNT_ID: "605134467471"
+    IMAGE_TAG: "wagtail"
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.9 # Specify the Python runtime version
+    commands:
+      - echo Updating system packages...
+      - aws --version
+      - apt-get update -y
+      - apt-get upgrade -y
+
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
+
+  build:
+    commands:
+      - echo Building the Docker image...
+      - docker build -t $REPOSITORY_NAME:$IMAGE_TAG .
+      - docker tag $REPOSITORY_NAME:$IMAGE_TAG $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$REPOSITORY_NAME:$IMAGE_TAG
+
+  post_build:
+    commands:
+      - echo Pushing the Docker image to Amazon ECR...
+      - docker push $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$REPOSITORY_NAME:$IMAGE_TAG
+      - echo Build completed successfully!

@@ -1,0 +1,44 @@
+version: 0.2
+
+env:
+  variables:
+    TERRAFORM_VERSION: "1.4.6"
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.9
+    commands:
+      - echo "Updating system packages..."
+      - set -e # Exit immediately if a command exits with a non-zero status
+      - apt-get update -y
+      - apt-get install -y curl unzip
+      - echo "Installing Terraform version ${TERRAFORM_VERSION}..."
+      - curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+      - echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+      - sudo apt update && sudo apt install terraform -y
+      - terraform --version
+      - echo "Terraform installation completed."
+
+  pre_build:
+    commands:
+      - echo "Finding the Terraform directory..."
+      - cd terraform/deployment
+      - ls -la
+      - echo "Executing terraform init..."
+      - terraform init
+
+  build:
+    commands:
+      - echo "Executing terraform plan..."
+      - terraform plan
+      - echo "Executing terraform apply..."
+      - terraform apply -auto-approve
+      - echo "Terraform apply completed. Waiting for 10 minutes before destroy..."
+      - sleep 600
+
+  post_build:
+    commands:
+      - echo "Executing terraform destroy..."
+      - terraform destroy -auto-approve
+      - echo "Terraform destroy completed. Build process finished."
